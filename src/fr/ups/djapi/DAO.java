@@ -29,43 +29,60 @@ import fr.ups.djapi.DJAPIConfiguration;
  */
 public abstract class DAO {
 
+	/**
+	 * Error logger
+	 */
 	protected Logger logger = Logger.getLogger("DAO");
-	/*
+
+	/**
 	 * Stores the connection informations.
 	 */
 	protected Connection con = null;
-	/*
-	 * A statement is the object used for executing static SQL statements and
-	 * returning the objects it produces.
+
+	/**
+	 * A prepared statement is the object used for executing static SQL
+	 * statements and returning the objects it produces.
 	 */
 	protected PreparedStatement stmt = null;
 
-	protected ResultSet rs = null;
+	/**
+	 * Result of the last executed request
+	 * 
+	 * @see java.sql.ResultSet
+	 */
+	protected ResultSet result = null;
 
 	/**
-	 * Sets the connection to the database.
+	 * Constructor
+	 * 
+	 * @param connection
+	 *            the connection to use for accessing the database
+	 */
+	protected DAO(Connection connection) {
+		// TODO: global launching logger activation
+		if (logger.getLevel() == null) { // Setting logger
+			logger.setLevel(Level.ALL);
+		}
+		this.con = connection;
+	}
+
+	/**
+	 * Constructor
+	 * 
+	 * Uses the default file (djapi_connection) to connect to a database and
+	 * create the Data Access Object.
+	 * 
 	 */
 	protected DAO() {
 		// TODO: global launching logger activation
 		if (logger.getLevel() == null) { // Setting logger
 			logger.setLevel(Level.ALL);
 		}
-		DJAPIConfiguration conf = DJAPIConfiguration.getInstance(); // Getting conf
-		try {
-			Class.forName(conf.getDriver());
-			con = DriverManager.getConnection(conf.getUrl(), conf.getLogin(),
-					conf.getPassword());
-			logger.finer("Connection set up on " + conf.getUrl());
-		} catch (SQLException e) {
-			logger.severe("Unable set the connection @Url: " + conf.getUrl());
-		} catch (ClassNotFoundException e) {
-			logger.severe("Unable to load the following driver class:"
-					+ conf.getDriver());
-		}
+		this.con = DJAPIConfiguration.getInstance().connect();
 	}
 
 	protected void closeAll() {
-		close(this.rs);
+		close(this.result);
 		close(this.stmt);
 	}
 
@@ -107,11 +124,11 @@ public abstract class DAO {
 	protected boolean executeQuery() {
 		boolean b = true;
 		try {
-			rs = stmt.executeQuery();
+			result = stmt.executeQuery();
 			// places the ResultSet to the first row, returns false if row is
 			// empty and sets the ResultSet to null.
 			if (!next()) {
-				rs = null;
+				result = null;
 				b = false;
 			}
 		} catch (SQLException ex) {
@@ -151,9 +168,9 @@ public abstract class DAO {
 	 */
 	protected void getGeneratedKeys() {
 		try {
-			rs = stmt.getGeneratedKeys();
+			result = stmt.getGeneratedKeys();
 			if (!next()) // nothing to retrieve
-				rs = null;
+				result = null;
 		} catch (SQLException ex) {
 			logger.severe("Unable to get generated keys !");
 			logger.fine("Current Statement: " + stmt);
@@ -272,7 +289,7 @@ public abstract class DAO {
 	protected int getInt(String s) {
 		int ret = -1;
 		try {
-			ret = rs.getInt(s);
+			ret = result.getInt(s);
 		} catch (SQLException ex) {
 			logger.severe("Unable to get integer from resultset");
 			logger.fine("Current statement: " + stmt);
@@ -293,7 +310,7 @@ public abstract class DAO {
 	protected String getString(String s) {
 		String ret = "";
 		try {
-			ret = rs.getString(s);
+			ret = result.getString(s);
 		} catch (SQLException ex) {
 			logger.severe("Unable to get integer from resultset");
 			logger.fine("Current statement: " + stmt);
@@ -314,7 +331,7 @@ public abstract class DAO {
 	protected boolean getBoolean(String s) {
 		boolean ret = false;
 		try {
-			ret = rs.getBoolean(s);
+			ret = result.getBoolean(s);
 		} catch (SQLException ex) {
 			logger.severe("Unable to get integer from resultset");
 			logger.fine("Current statement: " + stmt);
@@ -335,7 +352,7 @@ public abstract class DAO {
 	protected Timestamp getTimestamp(String s) {
 		Timestamp ret = null;
 		try {
-			ret = rs.getTimestamp(s);
+			ret = result.getTimestamp(s);
 		} catch (SQLException ex) {
 			logger.severe("Unable to get integer from resultset");
 			logger.fine("Current statement: " + stmt);
@@ -356,7 +373,7 @@ public abstract class DAO {
 	protected boolean next() {
 		boolean b = false;
 		try {
-			b = rs.next();
+			b = result.next();
 		} catch (SQLException ex) {
 			logger.severe("ResultSet error. ");
 			logger.fine("Current Statement " + stmt);
